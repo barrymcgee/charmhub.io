@@ -1,25 +1,20 @@
 import re
 
+import humanize
 import talisker
 from canonicalwebteam.discourse import DocParser
 from canonicalwebteam.discourse.exceptions import PathNotFoundError
 from canonicalwebteam.store_api.stores.charmstore import CharmPublisher
-from flask import Blueprint, abort, redirect, jsonify
+from flask import Blueprint, Response, abort
 from flask import current_app as app
-from flask import render_template, request, Response
-
+from flask import jsonify, redirect, render_template, request
+from pybadges import badge
 from webapp.config import DETAILS_VIEW_REGEX
 from webapp.decorators import (
-    store_maintenance,
     redirect_uppercase_to_lowercase,
+    store_maintenance,
 )
-from webapp.feature import COMMANDS_OVERWRITE
-from webapp.helpers import (
-    discourse_api,
-    decrease_headers,
-    md_parser,
-)
-from pybadges import badge
+from webapp.helpers import decrease_headers, discourse_api, md_parser
 from webapp.store import logic
 
 store = Blueprint(
@@ -35,7 +30,7 @@ SEARCH_FIELDS = [
     "result.publisher.display-name",
     "default-release.revision.revision",
     "default-release.channel",
-    "default-release.channel.base",
+    "result.deployable-on",
 ]
 
 CATEGORIES = [
@@ -108,13 +103,8 @@ FIELDS = [
     "result.publisher.display-name",
     "result.title",
     "channel-map",
+    "result.deployable-on",
 ]
-
-# TODO This is a temporary fix for release
-# Store will release a field to flag if a charm needs the
-# prefix cs:
-# CS is the list of charms that don't need prefix "cs:"
-CS = []
 
 
 def get_package(entity_name, channel_request, fields):
@@ -127,15 +117,14 @@ def get_package(entity_name, channel_request, fields):
     if not package["default-release"]:
         abort(404)
 
-    if COMMANDS_OVERWRITE.get(entity_name):
-        package["command"] = COMMANDS_OVERWRITE[entity_name]
-    else:
-        package["command"] = entity_name
+    # Fix issue #1010
+    if channel_request:
+        channel_map = app.store_api.get_item_details(
+            entity_name, fields=["channel-map"]
+        )
+        package["channel-map"] = channel_map["channel-map"]
 
     package = logic.add_store_front_data(package, True)
-
-    if package["name"] not in CS:
-        package["cs"] = True
 
     for channel in package["channel-map"]:
         channel["channel"]["released-at"] = logic.convert_date(
@@ -324,6 +313,11 @@ def details_library(entity_name, library_name):
 
     docstrings = logic.process_python_docs(library, module_name=library_name)
 
+    # Charmcraft string to fetch the library
+    fetch_charm = entity_name.replace("-", "_")
+    fetch_api = library["api"]
+    fetch_string = f"charms.{fetch_charm}.v{fetch_api}.{library_name}"
+
     if "source-code" in request.path[1:]:
         template = "details/libraries/source-code.html"
     else:
@@ -338,6 +332,7 @@ def details_library(entity_name, library_name):
         docstrings=docstrings,
         channel_requested=channel_request,
         library_name=library_name,
+        fetch_string=fetch_string,
         creation_date=logic.convert_date(library["created-at"]),
     )
 
@@ -398,6 +393,68 @@ def details_history(entity_name):
         "details/history.html",
         package=package,
         channel_requested=channel_request,
+    )
+
+
+@store.route('/<regex("' + DETAILS_VIEW_REGEX + '"):entity_name>/resources')
+@store_maintenance
+@redirect_uppercase_to_lowercase
+def details_resources(entity_name):
+    channel_request = request.args.get("channel", default=None, type=str)
+    package = get_package(entity_name, channel_request, FIELDS)
+
+    # /resources redirect to the first resource
+    if package["default-release"]["resources"]:
+        name = package["default-release"]["resources"][0]["name"]
+        return redirect(f"/{entity_name}/resources/{name}")
+    else:
+        abort(404)
+
+
+@store.route(
+    '/<regex("'
+    + DETAILS_VIEW_REGEX
+    + '"):entity_name>/resources/<string:resource_name>'
+)
+@store_maintenance
+@redirect_uppercase_to_lowercase
+def details_resource(entity_name, resource_name):
+    channel_request = request.args.get("channel", default=None, type=str)
+    package = get_package(entity_name, channel_request, FIELDS)
+    resources = package["default-release"]["resources"]
+
+    if not resources:
+        abort(404)
+
+    resource = next(
+        (item for item in resources if item["name"] == resource_name), None
+    )
+
+    if not resource:
+        abort(404)
+
+    # Get OCI image details
+    if resource["type"] == "oci-image":
+        oci_details = app.store_api.process_response(
+            app.store_api.session.get(resource["download"]["url"])
+        )
+        resource["image_name"], resource["digest"] = oci_details[
+            "ImageName"
+        ].split("@")
+        resource["short_digest"] = resource["digest"].split(":")[1][:12]
+
+    revisions = app.store_api.get_resource_revisions(
+        entity_name, resource_name
+    )
+    revisions = sorted(revisions, key=lambda k: k["revision"], reverse=True)
+    resource["size"] = humanize.naturalsize(resource["download"]["size"])
+
+    return render_template(
+        "details/resources.html",
+        package=package,
+        channel_requested=channel_request,
+        resource=resource,
+        revisions=revisions,
     )
 
 
@@ -504,9 +561,9 @@ def entity_icon(entity_name):
         ],
     )
 
-    icon_url = package["result"]["media"][0]["url"]
-
-    if not icon_url:
+    if package["result"]["media"]:
+        icon_url = package["result"]["media"][0]["url"]
+    else:
         icon_url = (
             "https://assets.ubuntu.com/v1/be6eb412-snapcraft-missing-icon.svg"
         )

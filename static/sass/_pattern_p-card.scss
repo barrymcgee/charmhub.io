@@ -49,14 +49,16 @@
 
   a.p-card--button {
     @extend %vf-has-box-shadow;
+    @extend %vf-has-round-corners;
 
     background-color: $color-x-light;
-    border-radius: $spv-inner--x-small;
     color: $color-dark;
     display: grid;
-    grid-template-rows: 9.5rem auto 2.25rem;
+    grid-template-rows: 9.5rem 3.9rem;
+
     // Force obey parent's border-radius
-    height: 16.75rem;
+    height: 16rem;
+    margin-bottom: $spv-outer--scaleable;
     width: 100%;
 
     &:hover {
@@ -130,6 +132,14 @@
           width: $spv-inner--medium;
         }
       }
+    }
+
+    .charm-card-button .p-tooltip__message--list {
+      display: none !important;
+    }
+
+    .charm-card-button:hover .p-tooltip__message--list {
+      display: inline !important;
     }
 
     &.is-topic-card {

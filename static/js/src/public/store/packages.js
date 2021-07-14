@@ -64,6 +64,8 @@ class initPackages {
         }
       })
       .catch((e) => console.error(e));
+
+    this.captureTooltipButtonClick();
   }
 
   addBundleApps() {
@@ -315,16 +317,16 @@ class initPackages {
     this.allPackages.forEach((entity) => {
       if (entity.store_front.categories) {
         entity.store_front.categories.forEach((cat) => {
-          if (!this.groupedPackages.categories[cat.name]) {
-            this.groupedPackages.categories[cat.name] = {
+          if (!this.groupedPackages.categories[cat.slug]) {
+            this.groupedPackages.categories[cat.slug] = {
               linux: [],
               kubernetes: [],
             };
           }
-          if (entity.store_front.base === "kubernetes") {
-            this.groupedPackages.categories[cat.name].kubernetes.push(entity);
+          if (entity.store_front["deployable-on"].includes("kubernetes")) {
+            this.groupedPackages.categories[cat.slug].kubernetes.push(entity);
           } else {
-            this.groupedPackages.categories[cat.name].linux.push(entity);
+            this.groupedPackages.categories[cat.slug].linux.push(entity);
           }
         });
       }
@@ -423,10 +425,7 @@ class initPackages {
   }
 
   filterPackages() {
-    if (
-      this._filters.base[0] === "all" &&
-      this._filters.filter.length === 0
-    ) {
+    if (this._filters.base[0] === "all" && this._filters.filter.length === 0) {
       this.packages = this.allPackages;
     } else if (
       this._filters.base[0] === "all" &&
@@ -440,11 +439,11 @@ class initPackages {
       this._filters.filter.length === 0
     ) {
       this.packages = this.allPackages.filter((entity) =>
-        entity.store_front.base === this._filters.base[0]
+        entity.store_front["deployable-on"].includes(this._filters.base[0])
       );
     } else {
       let pakagesFilteredByPlatform = this.allPackages.filter((entity) =>
-        entity.store_front.base === this._filters.base[0]
+        entity.store_front["deployable-on"].includes(this._filters.base[0])
       );
 
       this.packages = pakagesFilteredByPlatform.filter((entity) =>
@@ -458,7 +457,7 @@ class initPackages {
 
     if (entity.store_front.categories) {
       packageCategories = entity.store_front.categories.map((cat) => {
-        return cat.name;
+        return cat.slug;
       });
     }
 
@@ -484,6 +483,8 @@ class initPackages {
       this.packages.forEach((entity) => {
         this.domEl.packageContainer.el.appendChild(buildPackageCard(entity));
       });
+
+      this.captureTooltipButtonClick();
     } else {
       throw new Error(
         `There is no element containing ${this.domEl.packageContainer.selector} selector.`
@@ -553,6 +554,19 @@ class initPackages {
         `There is no element containing ${this.domEl.filterButtonMobileOpen.selector} selector.`
       );
     }
+  }
+
+  captureTooltipButtonClick() {
+    const charmCardButtons = document.querySelectorAll(
+      "[data-js-functionality-button]"
+    );
+
+    charmCardButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
   }
 }
 

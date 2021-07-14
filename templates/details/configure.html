@@ -3,14 +3,14 @@
 {% extends '/details/details_layout.html' %}
 
 {% block details_content %}
-<div class="row is-wide p-details-tab__content">
+<div class="row p-details-tab__content">
   {% if package.store_front.config.options %}
-  <div class="col-3 has-space--right">
-    <div class="p-side-navigation" data-js="{{ section_slug }}">
+  <div class="col-3">
+    <div class="p-side-navigation is-sticky" data-js="{{ section_slug }}">
       <ul class="p-side-navigation__list">
         {% for config in package.store_front.config.options.keys() %}
         <li class="p-side-navigation__item">
-          <a href="#{{ config }}" class="p-side-navigation__link u-truncate" role="tab" aria-controls="{{ config }}" {% if loop.index == 1 %}aria-selected="false" {% endif %}>
+          <a href="#{{ config }}" class="p-side-navigation__link u-truncate {% if loop.index == 1 %}is-active{% endif %}" role="tab" aria-controls="{{ config }}" {% if loop.index == 1 %}aria-selected="false" {% endif %}>
             {{ config }}
           </a>
         </li>
@@ -18,13 +18,13 @@
       </ul>
     </div>
   </div>
-  <div class="col-9 col-large-6">
+  <div class="col-9">
     <ul class="p-list--divided has-separator-centered">
       {% for key, value in package.store_front.config.options.items() %}
       <li class="p-list__item" id="{{ key }}">
         <p class="p-heading--4">{{ key }} <span class="u-text--muted">&VerticalLine; {{ value.type }}</span></p>
         {% if value.default %}
-        <p style="overflow-wrap: break-word;"><span class="u-text--muted">Default:</span> {{ value.default }}</p>
+        <p style="overflow-wrap: break-word; white-space: pre-wrap;"><span class="u-text--muted">Default:</span> {{ value.default }}</p>
         {% endif %}
         <p style="overflow-wrap: break-word; white-space: pre-wrap;">{{ value.description | escape }}</p>
       </li>

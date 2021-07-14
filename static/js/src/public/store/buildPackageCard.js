@@ -24,7 +24,7 @@ function buildPackageCard(entity) {
   const entityCard = document.getElementById("package-card");
   const clone = entityCard.content.cloneNode(true);
 
-  const entityCardContainer = clone.querySelector(".l-flex__card");
+  const entityCardContainer = clone.querySelector("[data-js='card-container']");
   entityCardContainer.id = entity.name;
 
   const entityCardButton = clone.querySelector(".p-card--button");
@@ -76,6 +76,10 @@ function buildPackageCard(entity) {
   const entityCardTitle = clone.querySelector(".package-card-title");
   entityCardTitle.innerText = entity.name.replace(/-/g, " ");
 
+  if (entity.result.publisher["display-name"] === null) {
+    entity.result.publisher["display-name"] = "";
+  }
+
   const entityCardPublisher = clone.querySelector(".package-card-publisher");
   let newCardPublisherText = truncateString(
     entity.result.publisher["display-name"],
@@ -96,7 +100,7 @@ function buildPackageCard(entity) {
   }
 
   const entityCardIcons = clone.querySelector(".package-card-icons");
-  if (entity.store_front.base === "kubernetes") {
+  if (entity.store_front["deployable-on"].includes("kubernetes")) {
     buildPlatformIcons(
       entityCardIcons,
       "Kubernetes",
@@ -105,7 +109,7 @@ function buildPackageCard(entity) {
     );
   }
 
-  if (entity.store_front.base === "windows") {
+  if (entity.store_front["deployable-on"].includes("windows")) {
     buildPlatformIcons(
       entityCardIcons,
       "Windows",
@@ -114,20 +118,20 @@ function buildPackageCard(entity) {
     );
   }
 
-  if (entity.store_front.base === "linux") {
+  if (entity.store_front["deployable-on"].includes("linux")) {
     buildPlatformIcons(
       entityCardIcons,
       "Linux",
-      "https://assets.ubuntu.com/v1/dc11bd39-Linux.svg",
+      "https://assets.ubuntu.com/v1/a911ecf6-vm-badge.svg",
       "This operator drives the application on Linux servers"
     );
   }
 
-  if (entity.store_front.base === "all") {
+  if (entity.store_front["deployable-on"].includes("all")) {
     buildPlatformIcons(
       entityCardIcons,
       "Linux",
-      "https://assets.ubuntu.com/v1/dc11bd39-Linux.svg",
+      "https://assets.ubuntu.com/v1/a911ecf6-vm-badge.svg",
       "This operator drives the application on Linux servers"
     );
     buildPlatformIcons(

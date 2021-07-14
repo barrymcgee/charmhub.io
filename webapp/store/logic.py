@@ -123,22 +123,30 @@ def convert_channel_maps(channel_map):
         if channel["channel"]["base"]:
             info["architecture"] = channel["channel"]["base"]["architecture"]
 
-        if not result[track][risk]:
-            result[track][risk].append(info)
+        result[track][risk].append(info)
 
-    # Order tracks and risks
+    # Order tracks (latest track first)
     result = OrderedDict(
         sorted(
             result.items(), key=lambda x: track_order.get(x[0], sys.maxsize)
         )
     )
 
+    # Order risks (stable, candidate, beta, edge)
     for track, track_data in result.items():
         result[track] = OrderedDict(
             sorted(
                 track_data.items(),
                 key=lambda x: risk_order.get(x[0], sys.maxsize),
             )
+        )
+
+    # Order releases by revision
+    for risk, releases in result[track].items():
+        result[track][risk] = sorted(
+            releases,
+            key=lambda k: int(k["revision"]["revision"]),
+            reverse=True,
         )
 
     return result
@@ -212,22 +220,37 @@ def get_docs_topic_id(metadata_yaml):
     Return discourse topic ID or None
     """
     base_url = discourse_api.base_url
-    # TODO this is a temporary fix (the only charm is mattermost)
-    old_url = "https://discourse.juju.is"
     docs_link = metadata_yaml.get("docs")
 
     if docs_link:
         if docs_link.startswith(base_url):
-            topic_id = docs_link[len(base_url) :].split("/")[3]
-        elif docs_link.startswith(old_url):
-            topic_id = docs_link[len(old_url) :].split("/")[3]
-        else:
-            return None
+            docs_link_parts = docs_link[len(base_url) :].split("/")
 
-        if topic_id.isnumeric():
-            return topic_id
+            if len(docs_link_parts) > 3:
+                topic_id = docs_link_parts[3]
+
+                if topic_id.isnumeric():
+                    return topic_id
 
     return None
+
+
+def convert_categories(api_categories):
+    """
+    The name property in the API response has a slug
+    like format, e.g., big-data
+
+    This method will return the desired name and an
+    extra slug property with the value from the API
+    """
+    result = []
+
+    for category in api_categories:
+        category["slug"] = category["name"]
+        category["name"] = format_slug(category["slug"])
+        result.append(category)
+
+    return result
 
 
 def add_store_front_data(package, details=False):
@@ -235,15 +258,13 @@ def add_store_front_data(package, details=False):
 
     extra["icons"] = get_icons(package)
 
-    if package["default-release"]["channel"]["base"]:
-        extra["base"] = PLATFORMS.get(
-            package["default-release"]["channel"]["base"]["name"],
-            package["default-release"]["channel"]["base"]["name"],
-        )
+    if package["result"]["deployable-on"]:
+        extra["deployable-on"] = package["result"]["deployable-on"]
     else:
-        extra["base"] = "all"
+        extra["deployable-on"] = ["linux"]
 
-    extra["categories"] = package["result"]["categories"]
+    extra["categories"] = convert_categories(package["result"]["categories"])
+
     if "title" in package["result"] and package["result"]["title"]:
         extra["display-name"] = package["result"]["title"]
     else:

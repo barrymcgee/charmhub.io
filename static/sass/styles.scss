@@ -2,12 +2,9 @@
 
 $brand-color: #772953;
 $color-ubuntu-orange: #e95420;
-$color-accent: #f7f7f7;
-
-$grid-max-width: 90rem;
-
-// navigation settings
-$theme-default-nav: dark;
+$color-accent: #00365c;
+$color-accent-background: #00365c;
+$color-text-orange: #d54110;
 
 // import cookie policy
 @import "@canonical/cookie-policy/build/css/cookie-policy";
@@ -53,6 +50,8 @@ $theme-default-nav: dark;
 @include vf-p-tabs;
 @include vf-p-tooltips;
 @include vf-p-contextual-menu;
+@include vf-l-fluid-breakout;
+@include vf-p-icon-change-version;
 
 // Vanilla utilities
 @include vf-u-align;
@@ -70,7 +69,6 @@ $theme-default-nav: dark;
 @include vf-u-no-max-width;
 @include vf-u-truncate;
 
-// Import site specific patterns and overrides
 @import "pattern_p-card";
 
 @include p-charmhub-card;
@@ -98,6 +96,7 @@ $theme-default-nav: dark;
 @import "pattern_p-icon";
 
 @include p-charmhub-icon;
+@include p-charmhub-social-icons;
 
 @import "pattern_p-strip";
 
@@ -110,10 +109,6 @@ $theme-default-nav: dark;
 @import "pattern_p-accordion";
 
 @include p-charmhub-accordion;
-
-@import "charmhub_l-store";
-
-@include l-charmhub-store;
 
 @import "pattern_heading-icon";
 
@@ -187,10 +182,6 @@ $theme-default-nav: dark;
 
 @include p-charmhub-separator;
 
-@import "pattern_p-search-box";
-
-@include p-charmhub-search-box;
-
 @import "pattern_p-button";
 
 @include p-charmhub-button;
@@ -218,6 +209,22 @@ $theme-default-nav: dark;
 @import "charmhub_p-topology";
 
 @include p-charmhub-topology;
+
+@import "pattern_l-fluid-breakout";
+
+@include l-charmhub-fluid-breakout;
+
+@import "pattern_p-subnav";
+
+@include p-charmhub-subnav;
+
+@import "charmhub_p-detail-tabs";
+
+@include p-detail-tabs;
+
+@import "charmhub_p-detail-inline-list";
+
+@include p-detail-inline-list;
 
 // Remove table row borders
 .p-table--no-borders tr {
@@ -299,6 +306,12 @@ body {
 }
 
 .p-details-tab__content {
+  .p-side-navigation {
+    @media (min-width: $breakpoint-medium) {
+      top: 56px;
+    }
+  }
+
   .p-side-navigation__link.u-truncate {
     display: block;
   }
@@ -369,8 +382,45 @@ h3 {
   }
 }
 
-// XXX Ant 17.11.2020 - This can be removed once this issue is closed
-// https://github.com/canonical-web-and-design/vanilla-framework/issues/3411
-.p-checkbox {
-  position: relative;
+// XXX Ovi 28.04.2021 - This can be removed once this issue is closed
+// https://github.com/canonical-web-and-design/vanilla-framework/issues/3723
+.l-fluid-breakout__item {
+  @media (min-width: $breakpoint-small) {
+    max-width: 30rem;
+  }
+}
+
+.juju-notification {
+  margin: 0.5rem 0;
+
+  @media (min-width: $breakpoint-medium) {
+    margin: 1rem 0 0;
+  }
+}
+
+.charm-framework-type {
+  border-top: 1px solid $color-mid-x-light;
+  margin-top: 1rem;
+  padding: 0.25rem 1rem 0.3rem;
+
+  @media (min-width: $breakpoint-large) {
+    padding-top: 0.1rem;
+  }
+
+  i {
+    margin-right: 4px;
+    position: relative;
+    top: 1px;
+  }
+}
+
+.detail-resource-footer {
+  small {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+
+    @media (min-width: $breakpoint-medium) {
+      margin-right: 1rem;
+    }
+  }
 }
